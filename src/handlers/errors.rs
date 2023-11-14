@@ -5,12 +5,14 @@ use crate::{AppData, generate_basic_context};
 
 
 pub async fn f404(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
      
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
 
     let (mut ctx, _, _, _) = generate_basic_context(id, &lang, req.uri().path());
 
@@ -23,12 +25,14 @@ pub async fn f404(
 
 #[get("/{lang}/not_found")]
 pub async fn not_found(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
      
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
 
     let (ctx, _, _, _) = generate_basic_context(id, &lang, req.uri().path());
 
@@ -38,12 +42,14 @@ pub async fn not_found(
 
 #[get("/{lang}/internal_server_error")]
 pub async fn internal_server_error(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
      
     req: HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
 
     let (ctx, _, _, _) = generate_basic_context(id, &lang, req.uri().path());
 
@@ -53,12 +59,14 @@ pub async fn internal_server_error(
 
 #[get("/{lang}/not_authorized")]
 pub async fn not_authorized(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
      
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
 
     let (ctx, _, _, _) = generate_basic_context(id, &lang, req.uri().path());
 

@@ -1,6 +1,6 @@
 // example auth: https://github.com/actix/actix-extras/blob/master/actix-identity/src/lib.rs
 
-use actix_web::{HttpRequest, HttpResponse, Responder, get, post, web, ResponseError};
+use actix_web::{HttpRequest, HttpResponse, Responder, get, post, web, ResponseError, HttpMessage};
 use actix_identity::{Identity};
 use inflector::Inflector;
 use serde::{Deserialize};
@@ -27,10 +27,11 @@ pub struct AdminUserForm {
 #[get("/{lang}/user_index")]
 pub async fn user_index(
     data: web::Data<AppData>,
-    web::Path(lang): web::Path<String>,
-    
+    path: web::Path<String>,
     id: Identity,
     req:HttpRequest) -> impl Responder {
+
+    let lang = path.into_inner();
 
     let (mut ctx, _session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
@@ -62,12 +63,14 @@ pub async fn user_index(
 
 #[get("/{lang}/user/{slug}")]
 pub async fn user_page_handler(
-    web::Path((lang, slug)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
     data: web::Data<AppData>,
     
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let (lang, slug) = path.into_inner();
     
     let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
     
@@ -104,11 +107,13 @@ pub async fn user_page_handler(
 #[get("/{lang}/edit_user/{slug}")]
 pub async fn edit_user(
     data: web::Data<AppData>,
-    web::Path((lang, slug)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
     
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let (lang, slug) = path.into_inner();
     
     let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
@@ -141,11 +146,13 @@ pub async fn edit_user(
 #[post("/{lang}/edit_user_post/{slug}")]
 pub async fn edit_user_post(
     _data: web::Data<AppData>,
-    web::Path((lang, slug)): web::Path<(String, String)>,
-    _req: HttpRequest, 
+    path: web::Path<(String, String)>,
+    req: HttpRequest, 
     form: web::Form<UserForm>,
     id: Identity,
 ) -> impl Responder {
+
+    let (lang, slug) = path.into_inner();
 
     let (session_user, role) = extract_identity_data(&id);
 
@@ -179,13 +186,12 @@ pub async fn edit_user_post(
                 user.user_name = form.user_name.trim().to_owned();
                 user.slug = user.user_name.clone().to_snake_case();
                 
-                id.forget();
-                id.remember(user.slug.to_owned());
+                id.logout();
+                actix_identity::Identity::login(&req.extensions(), user.slug.to_owned());
                 user_name_changed = true;
             };
 
             if email_changed || user_name_changed {
-                // changes registered, update user
                 // changes registered, update user
                 let user_update = User::update(user);
 
@@ -221,11 +227,13 @@ pub async fn edit_user_post(
 #[get("/{lang}/admin_edit_user/{slug}")]
 pub async fn admin_edit_user(
     data: web::Data<AppData>,
-    web::Path((lang, slug)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
     
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let (lang, slug) = path.into_inner();
     
     let (mut ctx, _session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
@@ -258,11 +266,13 @@ pub async fn admin_edit_user(
 #[post("/{lang}/admin_edit_user/{slug}")]
 pub async fn admin_edit_user_post(
     _data: web::Data<AppData>,
-    web::Path((lang, slug)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
     _req: HttpRequest, 
     form: web::Form<AdminUserForm>,
     id: Identity,
 ) -> impl Responder {
+
+    let (lang, slug) = path.into_inner();
 
     let (_session_user, role) = extract_identity_data(&id);
 
@@ -324,12 +334,14 @@ pub async fn admin_edit_user_post(
 
 #[get("/{lang}/delete_user/{slug}")]
 pub async fn delete_user_handler(
-    web::Path((lang, slug)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
     data: web::Data<AppData>,
     
     req: HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let (lang, slug) = path.into_inner();
 
     let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
     
@@ -361,12 +373,14 @@ pub async fn delete_user_handler(
 
 #[post("/{lang}/delete_user/{slug}")]
 pub async fn delete_user(
-    web::Path((lang, slug)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
     _data: web::Data<AppData>,
     _req: HttpRequest,
     id: Identity,
     form: web::Form<DeleteForm>,
 ) -> impl Responder {
+
+    let (lang, slug) = path.into_inner();
 
     let (session_user, role) = extract_identity_data(&id);
     
@@ -387,7 +401,7 @@ pub async fn delete_user(
                     println!("User matches verify string - deleting");
                     // forget id if delete target is user
                     if session_user == u.slug {
-                        id.forget();
+                        id.logout();
                     };
 
                     // Transfer User Created Objects to Global or Admin Account

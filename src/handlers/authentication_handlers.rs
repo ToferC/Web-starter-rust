@@ -2,7 +2,7 @@
 
 use std::env;
 
-use actix_web::{HttpRequest, HttpResponse, Responder, get, post, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, get, post, web, HttpMessage};
 use actix_session::{Session, UserSession};
 use actix_identity::{Identity};
 use serde::{Deserialize};
@@ -39,12 +39,14 @@ pub struct PasswordForm {
 
 #[get("/{lang}/log_in")]
 pub async fn login_handler(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
     
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
 
     let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
@@ -54,18 +56,20 @@ pub async fn login_handler(
 
 #[post("/{lang}/log_in")]
 pub async fn login_form_input(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     _data: web::Data<AppData>,
-    _req: HttpRequest, 
+    req: HttpRequest, 
     form: web::Form<LoginForm>,
     _session: Session,
     id: Identity,
 ) -> impl Responder {
 
+    let lang = path.into_inner();
+
     // validate form has data or re-load form
     if form.email.is_empty() || form.password.is_empty() {
         println!("Form is empty");
-        return HttpResponse::Found().header("Location", format!("/{}/log_in", &lang)).finish()
+        return HttpResponse::Found().append_header(("Location", format!("/{}/log_in", &lang))).finish()
     };
     
     let user = User::find_from_email(&form.email.to_lowercase().trim().to_string());
@@ -78,18 +82,18 @@ pub async fn login_form_input(
             if verify(&user, &form.password.trim().to_string()) {
                 println!("Verified");
 
-                id.remember(user.slug.to_owned());
+                actix_identity::Identity::login(&req.extensions(), user.slug.to_owned());
                         
-                return HttpResponse::Found().header("Location", format!("/{}/user/{}", &lang, user.slug)).finish()
+                return HttpResponse::Found().append_header(("Location", format!("/{}/user/{}", &lang, user.slug))).finish()
             } else {
                 // Invalid login
                 println!("User not verified");
-                return HttpResponse::Found().header("Location", format!("/{}/log_in", &lang)).finish()
+                return HttpResponse::Found().append_header(("Location", format!("/{}/log_in", &lang))).finish()
             }
         },
         _ => {
             println!("User not verified");
-            return HttpResponse::Found().header("Location", format!("/{}/log_in", &lang)).finish()
+            return HttpResponse::Found().append_header(("Location", format!("/{}/log_in", &lang))).finish()
         },
     };
 
@@ -97,12 +101,14 @@ pub async fn login_form_input(
 
 #[get("/{lang}/register")]
 pub async fn register_handler(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
     
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
     
     let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
@@ -112,12 +118,14 @@ pub async fn register_handler(
 
 #[get("/{lang}/registration_error")]
 pub async fn registration_error(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
     
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
     
     let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
@@ -127,12 +135,15 @@ pub async fn registration_error(
 
 #[post("/{lang}/register")]
 pub async fn register_form_input(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
     req: HttpRequest, 
     form: web::Form<RegisterForm>,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
+
     println!("Handling Post Request: {:?}", req);
 
     // validate form has data or re-load form
