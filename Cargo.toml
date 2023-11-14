@@ -8,12 +8,12 @@ build = "build.rs"
 
 [dependencies]
 # Web
-actix-web = "3.3.3"
+actix-web = "4.4.0"
 actix-web-httpauth = { git = "https://github.com/actix/actix-web-httpauth" }
-actix-rt = "1.1.1"
+actix-rt = "2.9.0"
 actix-multipart = "0.3.0"
 actix-service = "2.0.2"
-actix-identity = "0.3.1"
+actix-identity = "0.6.0"
 actix-session = "0.4.1"
 actix-web-static-files = "3.0.5"
 

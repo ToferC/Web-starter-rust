@@ -76,11 +76,11 @@ pub fn extract_session_data(session: &Session) -> (String, String) {
 
 pub fn extract_identity_data(id: &Identity) -> (String, String) {
 
-    let id_data = id.identity();
+    let id_data = id.id();
 
     let session_user = match id_data {
-        Some(u) => u,
-        None => "".to_string(),
+        Ok(u) => u,
+        Err(e) => "".to_string(),
     };
 
     let user = models::User::find_slim_from_slug(&session_user);
