@@ -3,7 +3,7 @@
 use std::env;
 
 use actix_web::{HttpRequest, HttpResponse, Responder, get, post, web, HttpMessage};
-use actix_session::{Session, UserSession};
+use actix_session::{Session, SessionExt};
 use actix_identity::{Identity};
 use serde::{Deserialize};
 
@@ -169,10 +169,10 @@ pub async fn register_form_input(
         
             let session = req.get_session();
         
-            session.set("role", user.role.to_owned()).expect("Unable to set role cookie");
-            session.set("session_user", user.slug.to_owned()).expect("Unable to set user name");
+            session.insert("role", user.role.to_owned()).expect("Unable to set role cookie");
+            session.insert("session_user", user.slug.to_owned()).expect("Unable to set user name");
         
-            id.remember(user.slug.to_owned());
+            actix_identity::Identity::login(&req.extensions(), user.slug.to_owned());
 
             // send verification email
             let verification = EmailVerification::create(
@@ -221,18 +221,20 @@ pub async fn register_form_input(
 
 #[get("/{lang}/email_verification")]
 pub async fn email_verification(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
     
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
     
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(id.clone(), &lang, req.uri().path());
+    let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
     if session_user == "".to_string() && role != "admin".to_string() {
         // person signed in shouldn't be here
-        return HttpResponse::Found().header("Location", format!("/{}", &lang)).finish()
+        return HttpResponse::Found().append_header(("Location", format!("/{}", &lang))).finish()
     };
 
     let user = User::find_from_slug(&session_user);
@@ -253,17 +255,19 @@ pub async fn email_verification(
 
 #[get("/{lang}/resend_email_verification")]
 pub async fn resend_email_verification(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
     
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(id.clone(), &lang, req.uri().path());
+    let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
     if session_user == "".to_string() && role != "admin".to_string() {
         // person signed in shouldn't be here
-        return HttpResponse::Found().header("Location", format!("/{}", &lang)).finish()
+        return HttpResponse::Found().append_header(("Location", format!("/{}", &lang))).finish()
     };
 
     let user = User::find_from_slug(&session_user);
