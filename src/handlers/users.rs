@@ -1,12 +1,12 @@
 // example auth: https://github.com/actix/actix-extras/blob/master/actix-identity/src/lib.rs
 
 use actix_web::{HttpRequest, HttpResponse, Responder, get, post, web, ResponseError, HttpMessage};
-use actix_identity::{Identity};
+use actix_identity::Identity;
 use inflector::Inflector;
-use serde::{Deserialize};
+use serde::Deserialize;
 
 use crate::{AppData, extract_identity_data, generate_basic_context};
-use crate::models::{User};
+use crate::models::User;
 use crate::handlers::DeleteForm;
 use crate::errors::CustomError;
 
@@ -33,7 +33,7 @@ pub async fn user_index(
 
     let lang = path.into_inner();
 
-    let (mut ctx, _session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (mut ctx, _session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
     if role != "admin".to_string() {
         let err = CustomError::new(
@@ -72,7 +72,7 @@ pub async fn user_page_handler(
 
     let (lang, slug) = path.into_inner();
     
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (mut ctx, session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
     
     if session_user.to_lowercase() != slug.to_lowercase() && role != "admin".to_string() {
         let err = CustomError::new(
@@ -115,7 +115,7 @@ pub async fn edit_user(
 
     let (lang, slug) = path.into_inner();
     
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (mut ctx, session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
     let user = User::find_from_slug(&slug);
 
@@ -161,7 +161,7 @@ pub async fn edit_user_post(
     &session_user != &slug ||
     &role != "admin" {
         // validate form has data or and permissions exist
-        return HttpResponse::Found().header("Location", format!("/{}/edit_user/{}", &lang, &slug)).finish()
+        return HttpResponse::Found().append_header(("Location", format!("/{}/edit_user/{}", &lang, &slug))).finish()
     };
 
     // update user
@@ -188,6 +188,7 @@ pub async fn edit_user_post(
                 
                 id.logout();
                 actix_identity::Identity::login(&req.extensions(), user.slug.to_owned());
+                
                 user_name_changed = true;
             };
 
@@ -201,10 +202,10 @@ pub async fn edit_user_post(
         
                         if email_changed {
                             // validate email
-                            return HttpResponse::Found().header("Location", "/email_verification").finish()
+                            return HttpResponse::Found().append_header(("Location", "/email_verification")).finish()
                         } else {
                             // return to user page
-                            return HttpResponse::Found().header("Location", format!("/{}/user/{}", &lang, &user.slug)).finish()
+                            return HttpResponse::Found().append_header(("Location", format!("/{}/user/{}", &lang, &user.slug))).finish()
                         }
                     },
                     Err(err) => {
@@ -214,7 +215,7 @@ pub async fn edit_user_post(
                 };
             } else {
                 // no change
-                return HttpResponse::Found().header("Location", format!("/{}/user/{}", &lang, &user.slug)).finish()
+                return HttpResponse::Found().append_header(("Location", format!("/{}/user/{}", &lang, &user.slug))).finish()
             };
         },
         Err(err) => {
@@ -235,7 +236,7 @@ pub async fn admin_edit_user(
 
     let (lang, slug) = path.into_inner();
     
-    let (mut ctx, _session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (mut ctx, _session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
     if &role != &"admin".to_string() {
         let err = CustomError::new(
@@ -280,7 +281,7 @@ pub async fn admin_edit_user_post(
     form.user_name.is_empty() ||
     &role != "admin" {
         // validate form has data or and permissions exist
-        return HttpResponse::Found().header("Location", format!("/{}/admin_edit_user/{}", &lang, &slug)).finish()
+        return HttpResponse::Found().append_header(("Location", format!("/{}/admin_edit_user/{}", &lang, &slug))).finish()
     };
 
     // update user
@@ -317,7 +318,7 @@ pub async fn admin_edit_user_post(
                     println!("User {} updated", &user.user_name);
     
                     // return to user page
-                    return HttpResponse::Found().header("Location", format!("/{}/user/{}", &lang, &user.slug)).finish()
+                    return HttpResponse::Found().append_header(("Location", format!("/{}/user/{}", &lang, &user.slug))).finish()
                 },
                 Err(err) => {
                     println!("{}", err);
@@ -343,11 +344,11 @@ pub async fn delete_user_handler(
 
     let (lang, slug) = path.into_inner();
 
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (mut ctx, session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
     
     if role != "admin".to_string() && &session_user != &slug {
         println!("User not admin");
-        HttpResponse::Found().header("Location", "/").finish()
+        HttpResponse::Found().append_header(("Location", "/")).finish()
     } else {
 
         let user = User::find_from_slug(&slug);
@@ -408,10 +409,10 @@ pub async fn delete_user(
 
                     // delete user
                     User::delete(u.id).expect("Unable to delete user");
-                    return HttpResponse::Found().header("Location", format!("/{}/user_index", &lang)).finish()
+                    return HttpResponse::Found().append_header(("Location", format!("/{}/user_index", &lang))).finish()
                 } else {
                     println!("User does not match verify string - return to delete page");
-                    return HttpResponse::Found().header("Location", format!("/{}/delete_user/{}", &lang, u.id)).finish()
+                    return HttpResponse::Found().append_header(("Location", format!("/{}/delete_user/{}", &lang, u.id))).finish()
                 };
             },
             Err(err) => {

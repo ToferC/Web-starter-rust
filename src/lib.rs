@@ -19,7 +19,7 @@ extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
-const APP_NAME: &str = "YOUR APP NAME";
+pub const APP_NAME: &str = "YOUR APP NAME";
 
 #[derive(Clone, Debug)]
 pub struct AppData {
@@ -29,7 +29,7 @@ pub struct AppData {
 
 /// Generate context, session_user, role and node_names from id and lang
 pub fn generate_basic_context(
-    id: Identity,
+    id: &Identity,
     lang: &str,
     path: &str,
 ) -> (Context, String, String, String) 
@@ -97,7 +97,7 @@ pub fn extract_identity_data(id: &Identity) -> (String, String) {
 
 /// Generate context, session_user and role from id and lang
 pub fn generate_email_context(
-    id: Identity,
+    id: &Identity,
     lang: &str,
     path: &str,) -> (Context, String, String, String) 
 {    

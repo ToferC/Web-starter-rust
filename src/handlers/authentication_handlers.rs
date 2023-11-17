@@ -4,8 +4,8 @@ use std::env;
 
 use actix_web::{HttpRequest, HttpResponse, Responder, get, post, web, HttpMessage};
 use actix_session::{Session, SessionExt};
-use actix_identity::{Identity};
-use serde::{Deserialize};
+use actix_identity::Identity;
+use serde::Deserialize;
 
 use crate::{AppData, generate_basic_context, generate_email_context, extract_identity_data, APP_NAME};
 use crate::models::{User, verify, UserData, EmailVerification, 
@@ -48,7 +48,7 @@ pub async fn login_handler(
 
     let lang = path.into_inner();
 
-    let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("authentication/log_in.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -61,7 +61,7 @@ pub async fn login_form_input(
     req: HttpRequest, 
     form: web::Form<LoginForm>,
     _session: Session,
-    id: Identity,
+    _id: Identity,
 ) -> impl Responder {
 
     let lang = path.into_inner();
@@ -82,7 +82,7 @@ pub async fn login_form_input(
             if verify(&user, &form.password.trim().to_string()) {
                 println!("Verified");
 
-                actix_identity::Identity::login(&req.extensions(), user.slug.to_owned());
+                actix_identity::Identity::login(&req.extensions(), user.slug.to_owned()).unwrap();
                         
                 return HttpResponse::Found().append_header(("Location", format!("/{}/user/{}", &lang, user.slug))).finish()
             } else {
@@ -110,7 +110,7 @@ pub async fn register_handler(
 
     let lang = path.into_inner();
     
-    let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("authentication/register.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -127,7 +127,7 @@ pub async fn registration_error(
 
     let lang = path.into_inner();
     
-    let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("authentication/registration_error.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -148,7 +148,7 @@ pub async fn register_form_input(
 
     // validate form has data or re-load form
     if form.email.is_empty() || form.password.is_empty() || form.user_name.is_empty() {
-        return HttpResponse::Found().header("Location", format!("/{}/register", &lang)).finish()
+        return HttpResponse::Found().append_header(("Location", format!("/{}/register", &lang))).finish()
     };
 
     // create user
@@ -172,14 +172,14 @@ pub async fn register_form_input(
             session.insert("role", user.role.to_owned()).expect("Unable to set role cookie");
             session.insert("session_user", user.slug.to_owned()).expect("Unable to set user name");
         
-            actix_identity::Identity::login(&req.extensions(), user.slug.to_owned());
+            actix_identity::Identity::login(&req.extensions(), user.slug.to_owned()).unwrap();
 
             // send verification email
             let verification = EmailVerification::create(
                 &InsertableVerification::new(&user.email)
             ).expect("Unable to create verification");
 
-            let (mut email_ctx, _, _, _) = generate_email_context(id, &lang, req.uri().path());
+            let (mut email_ctx, _, _, _) = generate_email_context(&id, &lang, req.uri().path());
             email_ctx.insert("user", &user);
             email_ctx.insert("verification", &verification);
 
@@ -210,11 +210,11 @@ pub async fn register_form_input(
                 Err(err) => println!("Error {}", err),
             };
             
-            return HttpResponse::Found().header("Location", format!("/{}/email_verification", &lang)).finish()
+            return HttpResponse::Found().append_header(("Location", format!("/{}/email_verification", &lang))).finish()
         },
         Err(err) => {
             println!("Error: {}", err);
-            return HttpResponse::Found().header("Location", format!("/{}/registration_error", &lang)).finish()
+            return HttpResponse::Found().append_header(("Location", format!("/{}/registration_error", &lang))).finish()
         },
     };
 }
@@ -230,7 +230,7 @@ pub async fn email_verification(
 
     let lang = path.into_inner();
     
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (mut ctx, session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
     if session_user == "".to_string() && role != "admin".to_string() {
         // person signed in shouldn't be here
@@ -248,7 +248,7 @@ pub async fn email_verification(
         },
         Err(err) => {
             println!("No user found: {}", err);
-            return HttpResponse::Found().header("Location", format!("/{}", &lang)).finish()
+            return HttpResponse::Found().append_header(("Location", format!("/{}", &lang))).finish()
         },
     }
 }
@@ -263,7 +263,7 @@ pub async fn resend_email_verification(
 
     let lang = path.into_inner();
     
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (mut ctx, session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
     if session_user == "".to_string() && role != "admin".to_string() {
         // person signed in shouldn't be here
@@ -281,7 +281,7 @@ pub async fn resend_email_verification(
                 &InsertableVerification::new(&user.email)
             ).expect("Unable to create verification");
 
-            let (mut email_ctx, _, _, _) = generate_email_context(id, &lang, req.uri().path());
+            let (mut email_ctx, _, _, _) = generate_email_context(&id, &lang, req.uri().path());
             email_ctx.insert("user", &user);
             email_ctx.insert("verification", &verification);
 
@@ -317,19 +317,21 @@ pub async fn resend_email_verification(
         },
         Err(err) => {
             println!("No user found: {}", err);
-            return HttpResponse::Found().header("Location", format!("/{}", &lang)).finish()
+            return HttpResponse::Found().append_header(("Location", format!("/{}", &lang))).finish()
         },
     }
 }
 
 #[post("/{lang}/verify_code")]
 pub async fn verify_code(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     _data: web::Data<AppData>,
     req: HttpRequest, 
     form: web::Form<VerifyForm>,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
     println!("Handling Post Request: {:?}", req);
 
     // Get session data and add to context
@@ -337,7 +339,7 @@ pub async fn verify_code(
 
     // validate form has data or re-load form
     if form.code.is_empty() || session_user == "".to_string() {
-        return HttpResponse::Found().header("Location", format!("/{}/email_verification", &lang)).finish()
+        return HttpResponse::Found().append_header(("Location", format!("/{}/email_verification", &lang))).finish()
     };
 
     // load user
@@ -348,7 +350,7 @@ pub async fn verify_code(
     // verify code entered vs code in email
     if form.code.trim() != verification_code.activation_code || chrono::Utc::now().naive_local() > verification_code.expires_on {
         // code doesn't match or time expired
-        return HttpResponse::Found().header("Location", format!("/{}/email_verification", &lang)).finish()
+        return HttpResponse::Found().append_header(("Location", format!("/{}/email_verification", &lang))).finish()
     };
     
     // validate user
@@ -358,36 +360,41 @@ pub async fn verify_code(
     // delete email_verification
     EmailVerification::delete(verification_code.id).expect("Unable to delete verification code");
     
-    HttpResponse::Found().header("Location", format!("/{}/user/{}", &lang, user.slug)).finish()
+    HttpResponse::Found().append_header(("Location", format!("/{}/user)/{}", &lang, user.slug))).finish()
 }
 
 #[get("/{lang}/log_out")]
 pub async fn logout(
-     web::Path(lang): web::Path<String>,
+     path: web::Path<String>,
     _data: web::Data<AppData>,
     req: HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
+
     println!("Handling Post Request: {:?}", req);
 
     let session = req.get_session();
 
     session.clear();
-    id.forget();
+    id.logout();
 
-    HttpResponse::Found().header("Location", format!("/{}", &lang)).finish()
+    HttpResponse::Found().append_header(("Location", format!("/{}", &lang))).finish()
 }
 
 #[get("/{lang}/request_password_reset")]
 pub async fn request_password_reset(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
     
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
     
-    let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("authentication/request_password_reset.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -395,13 +402,16 @@ pub async fn request_password_reset(
 
 #[post("/{lang}/request_password_reset")]
 pub async fn request_password_reset_post(
-    web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
     req: HttpRequest, 
     form: web::Form<EmailForm>,
     
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
+
     println!("Handling Post Request: {:?}", req);
 
     // Get session data and add to context
@@ -409,7 +419,7 @@ pub async fn request_password_reset_post(
 
     // validate form has data or re-load form
     if form.email.is_empty() {
-        return HttpResponse::Found().header("Location", format!("/{}/email_verification", &lang)).finish()
+        return HttpResponse::Found().append_header(("Location", format!("/{}/email_verification", &lang))).finish()
     };
 
     // load user
@@ -424,7 +434,7 @@ pub async fn request_password_reset_post(
             ).expect("Unable to create verification");
 
             // render email
-            let (mut email_ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+            let (mut email_ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
             email_ctx.insert("user", &user);
             email_ctx.insert("verification", &token);
@@ -461,26 +471,28 @@ pub async fn request_password_reset_post(
             };
 
             // redirect to page
-            HttpResponse::Found().header("Location", format!("/{}/password_email_sent", &lang)).finish()
+            HttpResponse::Found().append_header(("Location", format!("/{}/password_email_sent", &lang))).finish()
 
         },
         Err(err) => {
             println!("Error: {}", err);
-            HttpResponse::Found().header("Location", format!("/{}/log_in", &lang)).finish()
+            HttpResponse::Found().append_header(("Location", format!("/{}/log_in", &lang))).finish()
         }
     }
 }
 
 #[get("/{lang}/password_email_sent")]
 pub async fn password_email_sent(
-     web::Path(lang): web::Path<String>,
+    path: web::Path<String>,
     data: web::Data<AppData>,
     
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let lang = path.into_inner();
     
-    let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+    let (ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("authentication/password_email_sent.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -488,12 +500,14 @@ pub async fn password_email_sent(
 
 #[get("/{lang}/password_reset/{token}")]
 pub async fn password_reset(
-    web::Path((lang, token)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
     data: web::Data<AppData>,
     
     req:HttpRequest,
     id: Identity,
 ) -> impl Responder {
+
+    let (lang, token) = path.into_inner();
 
     let result = PasswordResetToken::find_by_token(&token);
 
@@ -501,7 +515,7 @@ pub async fn password_reset(
         Ok(verified_token) => {
             let user = User::find_from_email(&verified_token.email_address).expect("Unable to load user from email");
 
-            let (mut ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
+            let (mut ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
 
             ctx.insert("user", &user);
             ctx.insert("token", &token);
@@ -512,23 +526,25 @@ pub async fn password_reset(
         Err(err) => {
             // token not valid return to login screen
             println!("Error: {}", &err);
-            return HttpResponse::Found().header("Location", format!("/{}/log_in", &lang)).finish()
+            return HttpResponse::Found().append_header(("Location", format!("/{}/log_in", &lang))).finish()
         }
     };
 }
 
 #[post("/{lang}/password_reset/{token}")]
 pub async fn password_reset_post(
-    web::Path((lang, token)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
     _data: web::Data<AppData>,
-    _req: HttpRequest, 
+    req: HttpRequest, 
     form: web::Form<PasswordForm>,
-    id: Identity,
+    _id: Identity,
 ) -> impl Responder {
+
+    let (lang, token) = path.into_inner();
 
     // validate form has data or re-load form
     if form.password.is_empty() || &token == "" {
-        return HttpResponse::Found().header("Location", format!("/{}/login", &lang)).finish()
+        return HttpResponse::Found().append_header(("Location", format!("/{}/login", &lang))).finish()
     };
 
     // update user
@@ -539,7 +555,7 @@ pub async fn password_reset_post(
 
             // check token is valid
             if chrono::Utc::now().naive_local() > reset_token.expires_on {
-                return HttpResponse::Found().header("Location", format!("/{}/login", &lang)).finish()
+                return HttpResponse::Found().append_header(("Location", format!("/{}/login", &lang))).finish()
             };
 
             let user = User::find_from_email(&reset_token.email_address).expect("Unable to load user from token email");
@@ -554,20 +570,20 @@ pub async fn password_reset_post(
                     PasswordResetToken::delete(reset_token.id).expect("Unable to delete token");
 
                     // log in user
-                    id.remember(user.slug.to_owned());
+                    actix_identity::Identity::login(&req.extensions(), user.slug.to_owned()).unwrap();
                         
-                    return HttpResponse::Found().header("Location", format!("/{}/user/{}", &lang, user.slug)).finish()
+                    return HttpResponse::Found().append_header(("Location", format!("/{}/user/{}", &lang, user.slug))).finish()
                 },
                 Err(err) => {
                     println!("Error: {}", err);
-                    return HttpResponse::Found().header("Location", format!("/{}/log_in", &lang)).finish()
+                    return HttpResponse::Found().append_header(("Location", format!("/{}/log_in", &lang))).finish()
 
                 }
             };
         },
         Err(err) => {
             println!("Error: {}", err);
-            return HttpResponse::Found().header("Location", format!("/{}/log_in", &lang)).finish()
+            return HttpResponse::Found().append_header(("Location", format!("/{}/log_in", &lang))).finish()
         }
     };
 }

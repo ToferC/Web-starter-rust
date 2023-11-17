@@ -3,13 +3,16 @@ use dotenv::dotenv;
 use std::env;
 use tera::{Tera};
 use tera_text_filters::snake_case;
-use actix_identity::{IdentityService, CookieIdentityPolicy};
+//use actix_identity::{IdentityService, CookieIdentityPolicy};
+use actix_session::{SessionMiddleware, storage::CookieSessionStore};
+use actix_web::cookie::Key;
 use actix_web_static_files;
 use sendgrid::SGClient;
 
-use data_docs::handlers;
-use data_docs::AppData;
-use data_docs::database;
+use web_starter::APP_NAME;
+use web_starter::handlers;
+use web_starter::AppData;
+use web_starter::database;
 
 use fluent_templates::{FluentLoader, static_loader};
 // https://lib.rs/crates/fluent-templates
@@ -25,7 +28,7 @@ static_loader! {
     };
 }
 
-#[actix_rt::main]
+#[actix_web::main]
 async fn main() -> std::io::Result<()> {
 
     dotenv().ok();
@@ -45,8 +48,10 @@ async fn main() -> std::io::Result<()> {
         (String::from("127.0.0.1"), String::from("8080"))
     };
 
-    let cookie_secret_key = env::var("COOKIE_SECRET_KEY").expect("Unable to find secret key");
+    let cookie_secret = env::var("COOKIE_SECRET_KEY").expect("Unable to find secret key");
 
+    let cookie_secret_key: Key = Key::from(&cookie_secret.as_bytes());
+    
     database::init();
 
     // SendGrid email API
@@ -57,6 +62,8 @@ async fn main() -> std::io::Result<()> {
         Ok(key) => sendgrid_key = key,
         Err(err) => panic!("Must supply API key in env variables to use: {}", err),
     };
+
+    println!("Serving {} on {}:{}", APP_NAME, &host, &port);
 
     HttpServer::new(move || {
         let mut tera = Tera::new(
@@ -79,14 +86,13 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(middleware::Logger::default())
             .configure(handlers::configure_services)
-            .data(data.clone())
+            .app_data(data.clone())
             .service(actix_web_static_files::ResourceFiles::new(
-                "/static", generated,
+                "/", generated,
             ))
-            .wrap(IdentityService::new(
-                CookieIdentityPolicy::new(&cookie_secret_key.as_bytes())
-                .name("user-auth")
-                .secure(false)))
+            .wrap(SessionMiddleware::new(
+                CookieSessionStore::default(), cookie_secret_key.clone())
+        )
     })
     .bind(format!("{}:{}", host, port))?
     .run()
