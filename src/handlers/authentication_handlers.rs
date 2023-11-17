@@ -43,12 +43,12 @@ pub async fn login_handler(
     data: web::Data<AppData>,
     
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
 
-    let (ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+    let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("authentication/log_in.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -105,12 +105,12 @@ pub async fn register_handler(
     data: web::Data<AppData>,
     
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
     
-    let (ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+    let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("authentication/register.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -122,12 +122,12 @@ pub async fn registration_error(
     data: web::Data<AppData>,
     
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
     
-    let (ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+    let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("authentication/registration_error.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -139,7 +139,7 @@ pub async fn register_form_input(
     data: web::Data<AppData>,
     req: HttpRequest, 
     form: web::Form<RegisterForm>,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
@@ -179,7 +179,7 @@ pub async fn register_form_input(
                 &InsertableVerification::new(&user.email)
             ).expect("Unable to create verification");
 
-            let (mut email_ctx, _, _, _) = generate_email_context(&id, &lang, req.uri().path());
+            let (mut email_ctx, _, _, _) = generate_email_context(user.slug.to_owned(), user.role.to_owned(), &lang, req.uri().path());
             email_ctx.insert("user", &user);
             email_ctx.insert("verification", &verification);
 
@@ -225,12 +225,12 @@ pub async fn email_verification(
     data: web::Data<AppData>,
     
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
     
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+    let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
     if session_user == "".to_string() && role != "admin".to_string() {
         // person signed in shouldn't be here
@@ -258,12 +258,12 @@ pub async fn resend_email_verification(
     path: web::Path<String>,
     data: web::Data<AppData>,
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
     
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+    let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
     if session_user == "".to_string() && role != "admin".to_string() {
         // person signed in shouldn't be here
@@ -281,7 +281,7 @@ pub async fn resend_email_verification(
                 &InsertableVerification::new(&user.email)
             ).expect("Unable to create verification");
 
-            let (mut email_ctx, _, _, _) = generate_email_context(&id, &lang, req.uri().path());
+            let (mut email_ctx, _, _, _) = generate_email_context(session_user, role, &lang, req.uri().path());
             email_ctx.insert("user", &user);
             email_ctx.insert("verification", &verification);
 
@@ -328,14 +328,14 @@ pub async fn verify_code(
     _data: web::Data<AppData>,
     req: HttpRequest, 
     form: web::Form<VerifyForm>,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
     println!("Handling Post Request: {:?}", req);
 
     // Get session data and add to context
-    let (session_user, _role) = extract_identity_data(&id);
+    let (session_user, _role, id) = extract_identity_data(id);
 
     // validate form has data or re-load form
     if form.code.is_empty() || session_user == "".to_string() {
@@ -389,12 +389,12 @@ pub async fn request_password_reset(
     data: web::Data<AppData>,
     
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
     
-    let (ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+    let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("authentication/request_password_reset.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -407,7 +407,7 @@ pub async fn request_password_reset_post(
     req: HttpRequest, 
     form: web::Form<EmailForm>,
     
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
@@ -415,7 +415,7 @@ pub async fn request_password_reset_post(
     println!("Handling Post Request: {:?}", req);
 
     // Get session data and add to context
-    let (_session_user, _role) = extract_identity_data(&id);
+    let (_session_user, _role, id) = extract_identity_data(id);
 
     // validate form has data or re-load form
     if form.email.is_empty() {
@@ -434,7 +434,7 @@ pub async fn request_password_reset_post(
             ).expect("Unable to create verification");
 
             // render email
-            let (mut email_ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+            let (mut email_ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
             email_ctx.insert("user", &user);
             email_ctx.insert("verification", &token);
@@ -487,12 +487,12 @@ pub async fn password_email_sent(
     data: web::Data<AppData>,
     
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
     
-    let (ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+    let (ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("authentication/password_email_sent.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -504,7 +504,7 @@ pub async fn password_reset(
     data: web::Data<AppData>,
     
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let (lang, token) = path.into_inner();
@@ -515,7 +515,7 @@ pub async fn password_reset(
         Ok(verified_token) => {
             let user = User::find_from_email(&verified_token.email_address).expect("Unable to load user from email");
 
-            let (mut ctx, _session_user, _role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+            let (mut ctx, _session_user, _role, _lang) = generate_basic_context(id, &lang, req.uri().path());
 
             ctx.insert("user", &user);
             ctx.insert("token", &token);

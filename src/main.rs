@@ -88,7 +88,7 @@ async fn main() -> std::io::Result<()> {
             .configure(handlers::configure_services)
             .app_data(data.clone())
             .service(actix_web_static_files::ResourceFiles::new(
-                "/", generated,
+                "/static", generated,
             ))
             .wrap(IdentityMiddleware::default())
             .wrap(

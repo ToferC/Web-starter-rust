@@ -9,12 +9,12 @@ pub async fn f404(
     data: web::Data<AppData>,
      
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
 
-    let (mut ctx, _, _, _) = generate_basic_context(&id, &lang, req.uri().path());
+    let (mut ctx, _, _, _) = generate_basic_context(id, &lang, req.uri().path());
 
     let uri_path = req.uri().path();
     ctx.insert("path", &uri_path);
@@ -29,12 +29,12 @@ pub async fn not_found(
     data: web::Data<AppData>,
      
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
 
-    let (ctx, _, _, _) = generate_basic_context(&id, &lang, req.uri().path());
+    let (ctx, _, _, _) = generate_basic_context(id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("errors/not_found.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -46,12 +46,12 @@ pub async fn internal_server_error(
     data: web::Data<AppData>,
      
     req: HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
 
-    let (ctx, _, _, _) = generate_basic_context(&id, &lang, req.uri().path());
+    let (ctx, _, _, _) = generate_basic_context(id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("errors/internal_server_error.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -63,12 +63,12 @@ pub async fn not_authorized(
     data: web::Data<AppData>,
      
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
 
-    let (ctx, _, _, _) = generate_basic_context(&id, &lang, req.uri().path());
+    let (ctx, _, _, _) = generate_basic_context(id, &lang, req.uri().path());
 
     let rendered = data.tmpl.render("errors/not_authorized.html", &ctx).unwrap();
     HttpResponse::Ok().body(rendered)

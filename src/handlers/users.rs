@@ -33,7 +33,7 @@ pub async fn user_index(
 
     let lang = path.into_inner();
 
-    let (mut ctx, _session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+    let (mut ctx, _session_user, role, _lang) = generate_basic_context(Some(id), &lang, req.uri().path());
 
     if role != "admin".to_string() {
         let err = CustomError::new(
@@ -67,12 +67,12 @@ pub async fn user_page_handler(
     data: web::Data<AppData>,
     
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let (lang, slug) = path.into_inner();
     
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+    let (mut ctx, session_user, role, _lang) = generate_basic_context(id, &lang, req.uri().path());
     
     if session_user.to_lowercase() != slug.to_lowercase() && role != "admin".to_string() {
         let err = CustomError::new(
@@ -115,7 +115,7 @@ pub async fn edit_user(
 
     let (lang, slug) = path.into_inner();
     
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
+    let (mut ctx, session_user, role, _lang) = generate_basic_context(Some(id), &lang, req.uri().path());
 
     let user = User::find_from_slug(&slug);
 
@@ -154,7 +154,7 @@ pub async fn edit_user_post(
 
     let (lang, slug) = path.into_inner();
 
-    let (session_user, role) = extract_identity_data(&id);
+    let (session_user, role, _id) = extract_identity_data(Some(id));
 
     if form.email.is_empty() || 
     form.user_name.is_empty() ||
@@ -186,7 +186,7 @@ pub async fn edit_user_post(
                 user.user_name = form.user_name.trim().to_owned();
                 user.slug = user.user_name.clone().to_snake_case();
                 
-                id.logout();
+                //id.logout();
                 actix_identity::Identity::login(&req.extensions(), user.slug.to_owned());
                 
                 user_name_changed = true;
@@ -231,37 +231,44 @@ pub async fn admin_edit_user(
     path: web::Path<(String, String)>,
     
     req:HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let (lang, slug) = path.into_inner();
+
+    if let Some(id) = id {
+        let (mut ctx, _session_user, role, _lang) = generate_basic_context(Some(id), &lang, req.uri().path());
     
-    let (mut ctx, _session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
-
-    if &role != &"admin".to_string() {
-        let err = CustomError::new(
-            406,
-            "Not authorized".to_string(),
-        );
-        println!("{}", &err);
-        return err.error_response()
-    };
-
-    let user = User::find_from_slug(&slug);
-
-    match user {
-        Ok(user) => {
-
-            ctx.insert("user", &user);
-        
-            let rendered = data.tmpl.render("users/admin_edit_user.html", &ctx).unwrap();
-            return HttpResponse::Ok().body(rendered)
-        },
-        Err(err) => {
+        if &role != &"admin".to_string() {
+            let err = CustomError::new(
+                406,
+                "Not authorized".to_string(),
+            );
             println!("{}", &err);
             return err.error_response()
-        },
-    };
+        };
+    
+        let user = User::find_from_slug(&slug);
+    
+        match user {
+            Ok(user) => {
+    
+                ctx.insert("user", &user);
+            
+                let rendered = data.tmpl.render("users/admin_edit_user.html", &ctx).unwrap();
+                return HttpResponse::Ok().body(rendered)
+            },
+            Err(err) => {
+                println!("{}", &err);
+                return err.error_response()
+            },
+        };
+    } else {
+        // redirect to login
+        return HttpResponse::Found().append_header(("Location", format!("/{}/log_in", &lang))).finish()
+
+    }
+    
 }
 
 #[post("/{lang}/admin_edit_user/{slug}")]
@@ -270,19 +277,26 @@ pub async fn admin_edit_user_post(
     path: web::Path<(String, String)>,
     _req: HttpRequest, 
     form: web::Form<AdminUserForm>,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let (lang, slug) = path.into_inner();
 
-    let (_session_user, role) = extract_identity_data(&id);
+    if let Some(id) = id {
+        
+        let (_session_user, role, _id) = extract_identity_data(Some(id));
+    
+        if form.email.is_empty() || 
+        form.user_name.is_empty() ||
+        &role != "admin" {
+            // validate form has data or and permissions exist
+            return HttpResponse::Found().append_header(("Location", format!("/{}/admin_edit_user/{}", &lang, &slug))).finish()
+        };
+    } else {
+        // Redirect to Login
+        return HttpResponse::Found().append_header(("Location", format!("/{}/log_in", &lang))).finish()
+    }
 
-    if form.email.is_empty() || 
-    form.user_name.is_empty() ||
-    &role != "admin" {
-        // validate form has data or and permissions exist
-        return HttpResponse::Found().append_header(("Location", format!("/{}/admin_edit_user/{}", &lang, &slug))).finish()
-    };
 
     // update user
     let user = User::find_from_slug(&slug);
@@ -339,36 +353,42 @@ pub async fn delete_user_handler(
     data: web::Data<AppData>,
     
     req: HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
 ) -> impl Responder {
 
     let (lang, slug) = path.into_inner();
 
-    let (mut ctx, session_user, role, _lang) = generate_basic_context(&id, &lang, req.uri().path());
-    
-    if role != "admin".to_string() && &session_user != &slug {
-        println!("User not admin");
-        HttpResponse::Found().append_header(("Location", "/")).finish()
-    } else {
+    if let Some(id) = id {
 
-        let user = User::find_from_slug(&slug);
+        let (mut ctx, session_user, role, _lang) = generate_basic_context(Some(id), &lang, req.uri().path());
         
-        match user {
-            Ok(u) => {
-
-                ctx.insert("user", &u);
-
-                // Handle User Delete for Objects created by user
+        if role != "admin".to_string() && &session_user != &slug {
+            println!("User not admin");
+            HttpResponse::Found().append_header(("Location", "/")).finish()
+        } else {
+    
+            let user = User::find_from_slug(&slug);
             
-                let rendered = data.tmpl.render("users/delete_user.html", &ctx).unwrap();
-                return HttpResponse::Ok().body(rendered)
-            },
-            Err(err) => {
-                // no user returned for ID
-                println!("{}", err);
-                return err.error_response()
-            },
+            match user {
+                Ok(u) => {
+    
+                    ctx.insert("user", &u);
+    
+                    // Handle User Delete for Objects created by user
+                
+                    let rendered = data.tmpl.render("users/delete_user.html", &ctx).unwrap();
+                    return HttpResponse::Ok().body(rendered)
+                },
+                Err(err) => {
+                    // no user returned for ID
+                    println!("{}", err);
+                    return err.error_response()
+                },
+            }
         }
+    } else {
+        // Redirect to Login
+        return HttpResponse::Found().append_header(("Location", format!("/{}/log_in", &lang))).finish()
     }
 }
 
@@ -377,49 +397,56 @@ pub async fn delete_user(
     path: web::Path<(String, String)>,
     _data: web::Data<AppData>,
     _req: HttpRequest,
-    id: Identity,
+    id: Option<Identity>,
     form: web::Form<DeleteForm>,
 ) -> impl Responder {
 
     let (lang, slug) = path.into_inner();
 
-    let (session_user, role) = extract_identity_data(&id);
-    
-    if session_user.to_lowercase() != slug.to_lowercase() && role != "admin".to_string() {
-        let err = CustomError::new(
-            406,
-            "Not authorized".to_string(),
-        );
-        println!("{}", &err);
-        return err.error_response()
-    } else {
+    if let Some(id) = id {
 
-        let user = User::find_from_slug(&slug);
+        let (session_user, role, id) = extract_identity_data(Some(id));
         
-        match user {
-            Ok(u) => {
-                if form.verify.trim().to_string() == u.user_name {
-                    println!("User matches verify string - deleting");
-                    // forget id if delete target is user
-                    if session_user == u.slug {
-                        id.logout();
+        if session_user.to_lowercase() != slug.to_lowercase() && role != "admin".to_string() {
+            let err = CustomError::new(
+                406,
+                "Not authorized".to_string(),
+            );
+            println!("{}", &err);
+            return err.error_response()
+        } else {
+    
+            let user = User::find_from_slug(&slug);
+            
+            match user {
+                Ok(u) => {
+                    if form.verify.trim().to_string() == u.user_name {
+                        println!("User matches verify string - deleting");
+                        // forget id if delete target is user
+                        if session_user == u.slug {
+                            id.unwrap().logout();
+                        };
+    
+                        // Transfer User Created Objects to Global or Admin Account
+    
+                        // delete user
+                        User::delete(u.id).expect("Unable to delete user");
+                        return HttpResponse::Found().append_header(("Location", format!("/{}/user_index", &lang))).finish()
+                    } else {
+                        println!("User does not match verify string - return to delete page");
+                        return HttpResponse::Found().append_header(("Location", format!("/{}/delete_user/{}", &lang, u.id))).finish()
                     };
-
-                    // Transfer User Created Objects to Global or Admin Account
-
-                    // delete user
-                    User::delete(u.id).expect("Unable to delete user");
-                    return HttpResponse::Found().append_header(("Location", format!("/{}/user_index", &lang))).finish()
-                } else {
-                    println!("User does not match verify string - return to delete page");
-                    return HttpResponse::Found().append_header(("Location", format!("/{}/delete_user/{}", &lang, u.id))).finish()
-                };
-            },
-            Err(err) => {
-                // no user returned for ID
-                println!("{}", err);
-                return err.error_response()
-            },
+                },
+                Err(err) => {
+                    // no user returned for ID
+                    println!("{}", err);
+                    return err.error_response()
+                },
+            }
         }
+    } else {
+        // Redirect to Login
+        return HttpResponse::Found().append_header(("Location", format!("/{}/log_in", &lang))).finish()
     }
+
 }

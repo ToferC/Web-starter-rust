@@ -29,7 +29,7 @@ pub struct AppData {
 
 /// Generate context, session_user, role and node_names from id and lang
 pub fn generate_basic_context(
-    id: &Identity,
+    id: Option<Identity>,
     lang: &str,
     path: &str,
 ) -> (Context, String, String, String) 
@@ -37,7 +37,7 @@ pub fn generate_basic_context(
     let mut ctx = Context::new();
 
     // Get session data and add to context
-    let (session_user, role) = extract_identity_data(&id);
+    let (session_user, role, _id) = extract_identity_data(id);
     ctx.insert("session_user", &session_user);
     ctx.insert("role", &role);
 
@@ -74,37 +74,43 @@ pub fn extract_session_data(session: &Session) -> (String, String) {
     (session_user, role)
 }
 
-pub fn extract_identity_data(id: &Identity) -> (String, String) {
+pub fn extract_identity_data(id: Option<Identity>) -> (String, String, Option<Identity>) {
 
-    let id_data = id.id();
+    if let Some(id) = id {
+        
+        let id_data = id.id();
+    
+        let session_user = match id_data {
+            Ok(u) => u,
+            Err(e) => "".to_string(),
+        };
+    
+        let user = models::User::find_slim_from_slug(&session_user);
+    
+        let role = match user {
+            Ok(u) => u.role,
+            _ => "".to_string()
+        };
+    
+        println!("{}-{}", &session_user, &role);
+    
+        (session_user, role, Some(id))
+    } else {
+        ("".to_string(), "".to_string(), None)
+    }
 
-    let session_user = match id_data {
-        Ok(u) => u,
-        Err(e) => "".to_string(),
-    };
-
-    let user = models::User::find_slim_from_slug(&session_user);
-
-    let role = match user {
-        Ok(u) => u.role,
-        _ => "".to_string()
-    };
-
-    println!("{}-{}", &session_user, &role);
-
-    (session_user, role)
 }
 
 /// Generate context, session_user and role from id and lang
 pub fn generate_email_context(
-    id: &Identity,
+    session_user: String,
+    role: String,
     lang: &str,
     path: &str,) -> (Context, String, String, String) 
 {    
 let mut ctx = Context::new();
 
 // Get session data and add to context
-let (session_user, role) = extract_identity_data(&id);
 ctx.insert("session_user", &session_user);
 ctx.insert("role", &role);
 
