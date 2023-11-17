@@ -1,9 +1,9 @@
-use actix_web::{HttpServer, App, middleware};
+use actix_web::{HttpServer, App, middleware, web};
 use dotenv::dotenv;
 use std::env;
 use tera::{Tera};
 use tera_text_filters::snake_case;
-//use actix_identity::{IdentityService, CookieIdentityPolicy};
+use actix_identity::IdentityMiddleware;
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use actix_web::cookie::Key;
 use actix_web_static_files;
@@ -76,10 +76,10 @@ async fn main() -> std::io::Result<()> {
         // mail client
         let sg = SGClient::new(sendgrid_key.clone());
 
-        let data = AppData {
+        let data = web::Data::new(AppData {
             tmpl: tera,
             mail_client: sg,
-        };
+        });
 
         let generated = generate();
 
@@ -90,9 +90,13 @@ async fn main() -> std::io::Result<()> {
             .service(actix_web_static_files::ResourceFiles::new(
                 "/", generated,
             ))
-            .wrap(SessionMiddleware::new(
-                CookieSessionStore::default(), cookie_secret_key.clone())
-        )
+            .wrap(IdentityMiddleware::default())
+            .wrap(
+                SessionMiddleware::builder(
+                    CookieSessionStore::default(), cookie_secret_key.clone())
+                    .cookie_secure(false)
+                    .build()
+                )
     })
     .bind(format!("{}:{}", host, port))?
     .run()

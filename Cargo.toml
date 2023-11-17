@@ -9,8 +9,6 @@ build = "build.rs"
 [dependencies]
 # Web
 actix-web = "4"
-#actix-web-httpauth = { git = "https://github.com/actix/actix-web-httpauth" }
-#actix-multipart = "0.3.0"
 actix-service = "2.0.2"
 actix-identity = "0.6.0"
 actix-session = { version = "0.8.0", features = ["cookie-session"] }
@@ -46,7 +44,7 @@ fluent-templates = { version = "*", features = ["tera"] }
 deepl-api = { git = "https://github.com/ToferC/deepl-api-rs.git", branch="master" }
 
 # email
-sendgrid = "0.17.4"
+sendgrid = { version = "0.19.2", features = ["async"] }
 
 [build-dependencies]
 static-files = "0.2.1"
