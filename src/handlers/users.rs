@@ -187,7 +187,7 @@ pub async fn edit_user_post(
                 user.slug = user.user_name.clone().to_snake_case();
                 
                 //id.logout();
-                actix_identity::Identity::login(&req.extensions(), user.slug.to_owned());
+                actix_identity::Identity::login(&req.extensions(), user.slug.to_owned()).unwrap();
                 
                 user_name_changed = true;
             };

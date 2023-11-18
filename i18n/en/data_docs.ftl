@@ -1,12 +1,12 @@
 hello-world = Hello World
-welcome-to = Welcome to Data Docs
+welcome-to = Welcome to Rust-Actix Web Starter
 
 ## General Section
 
-data-docs = Data Docs
--app-name = Data Docs
+data-docs = Rust-Actix Web Starter
+-app-name = Rust-Actix Web Starter
 app-description = { -app-name } is a learning project and experiment in constructing organizational documents as native data structures.
-app-mvp = Data Docs MVP
+app-mvp = Rust-Actix Web Starter MVP
 -user-support-email = usersupport@intersectional-data.ca
 
 ## Base & Navbar
@@ -21,8 +21,8 @@ register = Register
 
 ## Footer
 footer-1 = Please note that this work is a learning project and experiment in using work documentation as native data.
-available-licence = The Data Docs project is available on GitHub under an MIT licence here:
-developed-by = Developed by ToferC 2022
+available-licence = The Rust-Actix Web Starter project is available on GitHub under an MIT licence here:
+developed-by = Developed by ToferC 2023
 
 ## Login Page
 email-address = Email address

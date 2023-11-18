@@ -61,7 +61,7 @@ pub async fn login_form_input(
     req: HttpRequest, 
     form: web::Form<LoginForm>,
     _session: Session,
-    _id: Identity,
+    _id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
@@ -139,7 +139,7 @@ pub async fn register_form_input(
     data: web::Data<AppData>,
     req: HttpRequest, 
     form: web::Form<RegisterForm>,
-    id: Option<Identity>,
+    _id: Option<Identity>,
 ) -> impl Responder {
 
     let lang = path.into_inner();
@@ -335,7 +335,7 @@ pub async fn verify_code(
     println!("Handling Post Request: {:?}", req);
 
     // Get session data and add to context
-    let (session_user, _role, id) = extract_identity_data(id);
+    let (session_user, _role, _id) = extract_identity_data(id);
 
     // validate form has data or re-load form
     if form.code.is_empty() || session_user == "".to_string() {
@@ -360,7 +360,7 @@ pub async fn verify_code(
     // delete email_verification
     EmailVerification::delete(verification_code.id).expect("Unable to delete verification code");
     
-    HttpResponse::Found().append_header(("Location", format!("/{}/user)/{}", &lang, user.slug))).finish()
+    HttpResponse::Found().append_header(("Location", format!("/{}/user/{}", &lang, user.slug))).finish()
 }
 
 #[get("/{lang}/log_out")]

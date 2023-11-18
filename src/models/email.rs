@@ -35,6 +35,8 @@ impl Email {
             .add_from_name("User Support at Intersectional-Data.ca")
             .add_header("x-system-generated".to_string(), "confirmed");
 
+        println!("{:?}", &mail_info);
+
         let sent = email.sg.send(mail_info).await;
 
         match sent {
