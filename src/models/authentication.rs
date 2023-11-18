@@ -44,7 +44,7 @@ impl InsertableVerification {
 
 impl EmailVerification {
     pub fn create(e: &InsertableVerification) -> Result<Self, CustomError> {
-        let conn = database::connection()?;
+        let mut conn = database::connection()?;
         let ev = diesel::insert_into(email_verification_code::table)
             .values(e)
             .on_conflict(email_verification_code::email_address)
@@ -53,23 +53,23 @@ impl EmailVerification {
                 email_verification_code::activation_code.eq(&e.activation_code),
                 email_verification_code::expires_on.eq(&e.expires_on),
             ))
-            .get_result(&conn)?;
+            .get_result(&mut conn)?;
         Ok(ev)
     }
 
     pub fn find_by_email(email: &String) -> Result<Self, CustomError> {
-        let conn = database::connection()?;
+        let mut conn = database::connection()?;
         let v = email_verification_code::table
             .filter(email_verification_code::email_address.eq(&email))
-            .first(&conn)?;
+            .first(&mut conn)?;
         Ok(v)
     }
 
     pub fn delete(id: Uuid) -> Result<usize, CustomError> {
-        let conn = database::connection()?;
+        let mut conn = database::connection()?;
         let res = diesel::delete(email_verification_code::table.filter(
             email_verification_code::id.eq(id)
-        )).execute(&conn)?;
+        )).execute(&mut conn)?;
         Ok(res)
     }
 }
@@ -106,7 +106,7 @@ impl InsertablePasswordResetToken {
 
 impl PasswordResetToken {
     pub fn create(e: &InsertablePasswordResetToken) -> Result<Self, CustomError> {
-        let conn = database::connection()?;
+        let mut conn = database::connection()?;
         let ev = diesel::insert_into(password_reset_token::table)
             .values(e)
             .on_conflict(password_reset_token::email_address)
@@ -115,23 +115,23 @@ impl PasswordResetToken {
                 password_reset_token::reset_token.eq(&e.reset_token),
                 password_reset_token::expires_on.eq(&e.expires_on),
             ))
-            .get_result(&conn)?;
+            .get_result(&mut conn)?;
         Ok(ev)
     }
 
     pub fn find_by_token(token: &String) -> Result<Self, CustomError> {
-        let conn = database::connection()?;
+        let mut conn = database::connection()?;
         let v = password_reset_token::table
             .filter(password_reset_token::reset_token.eq(&token))
-            .first(&conn)?;
+            .first(&mut conn)?;
         Ok(v)
     }
 
     pub fn delete(id: Uuid) -> Result<usize, CustomError> {
-        let conn = database::connection()?;
+        let mut conn = database::connection()?;
         let res = diesel::delete(password_reset_token::table.filter(
             password_reset_token::id.eq(id)
-        )).execute(&conn)?;
+        )).execute(&mut conn)?;
         Ok(res)
     }
 }

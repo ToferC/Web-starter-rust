@@ -14,7 +14,7 @@ use diesel::prelude::*;
 use diesel::RunQueryDsl;
 use diesel::{QueryDsl};
 
-#[derive(Serialize, Deserialize, Queryable, Insertable, Debug, Associations, Identifiable, AsChangeset, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Debug, Identifiable, AsChangeset, Clone)]
 #[table_name = "users"]
 pub struct User {
     pub id: Uuid,
@@ -96,7 +96,7 @@ impl From<UserData> for InsertableUser {
 
 impl User {
     pub fn create(user_data: UserData) -> Result<Self, CustomError> {
-        let conn = database::connection()?;
+        let mut conn = database::connection()?;
         let insertable_user = InsertableUser::from(user_data.clone());
         let user = diesel::insert_into(users::table)
             .values(insertable_user)
@@ -106,80 +106,80 @@ impl User {
                 users::role.eq(&user_data.role),
                 users::validated.eq(&user_data.validated),
             ))
-            .get_result(&conn)?;
+            .get_result(&mut conn)?;
         Ok(user)
     }
 
     pub fn find_all() -> Result<Vec<Self>, CustomError> {
-        let conn = database::connection()?;
-        let users = users::table.load::<User>(&conn)?;
+        let mut conn = database::connection()?;
+        let users = users::table.load::<User>(&mut conn)?;
         Ok(users)
     }
 
     pub fn find_admins() -> Result<Vec<Self>, CustomError> {
-        let conn = database::connection()?;
+        let mut conn = database::connection()?;
         let users = users::table
             .filter(users::role.eq("admin"))
-            .load::<User>(&conn)?;
+            .load::<User>(&mut conn)?;
         Ok(users)
     }
 
     pub fn find(id: Uuid) -> Result<Self, CustomError> {
-        let conn = database::connection()?;
-        let user = users::table.filter(users::id.eq(id)).first(&conn)?;
+        let mut conn = database::connection()?;
+        let user = users::table.filter(users::id.eq(id)).first(&mut conn)?;
         Ok(user)
     }
 
     pub fn find_from_email(email: &String) -> Result<Self, CustomError> {
-        let conn = database::connection()?;
-        let user: User = users::table.filter(users::email.eq(email)).first(&conn)?;
+        let mut conn = database::connection()?;
+        let user: User = users::table.filter(users::email.eq(email)).first(&mut conn)?;
         Ok(user)
     }
 
     pub fn find_slim_from_email(email: &String) -> Result<SlimUser, CustomError> {
-        let conn = database::connection()?;
-        let user: User = users::table.filter(users::email.eq(email)).first(&conn)?;
+        let mut conn = database::connection()?;
+        let user: User = users::table.filter(users::email.eq(email)).first(&mut conn)?;
 
         let sl = SlimUser::from(user);
         Ok(sl)
     }
 
     pub fn find_from_slug(slug: &String) -> Result<User, CustomError> {
-        let conn = database::connection()?;
-        let user: User = users::table.filter(users::slug.eq(slug)).first(&conn)?;
+        let mut conn = database::connection()?;
+        let user: User = users::table.filter(users::slug.eq(slug)).first(&mut conn)?;
         Ok(user)
     }
 
     pub fn find_id_from_slug(slug: &String) -> Result<Uuid, CustomError> {
-        let conn = database::connection()?;
-        let id: Uuid = users::table.select(users::id).filter(users::slug.eq(slug)).first(&conn)?;
+        let mut conn = database::connection()?;
+        let id: Uuid = users::table.select(users::id).filter(users::slug.eq(slug)).first(&mut conn)?;
         Ok(id)
     }
 
     pub fn find_slim_from_slug(slug: &String) -> Result<SlimUser, CustomError> {
-        let conn = database::connection()?;
-        let user: User = users::table.filter(users::slug.eq(slug)).first(&conn)?;
+        let mut conn = database::connection()?;
+        let user: User = users::table.filter(users::slug.eq(slug)).first(&mut conn)?;
         Ok(SlimUser::from(user))
     }
 
     pub fn find_from_user_name(user_name: &String) -> Result<SlimUser, CustomError> {
-        let conn = database::connection()?;
-        let user: User = users::table.filter(users::user_name.eq(user_name)).first(&conn)?;
+        let mut conn = database::connection()?;
+        let user: User = users::table.filter(users::user_name.eq(user_name)).first(&mut conn)?;
         let sl = SlimUser::from(user);
         Ok(sl)
     }
 
     pub fn update(user: User) -> Result<Self, CustomError> {
-        let conn = database::connection()?;
+        let mut conn = database::connection()?;
         let user = diesel::update(users::table)
             .filter(users::id.eq(user.id))
             .set(user)
-            .get_result(&conn)?;
+            .get_result(&mut conn)?;
         Ok(user)
     }
 
     pub fn update_password(user_id: Uuid, password: &String) -> Result<Self, CustomError> {
-        let conn = database::connection()?;
+        let mut conn = database::connection()?;
 
         let salt = make_salt();
 
@@ -189,13 +189,13 @@ impl User {
                 users::hash.eq(make_hash(&password, &salt).as_bytes().to_vec()),
                 users::salt.eq(salt),
             ))
-            .get_result(&conn)?;
+            .get_result(&mut conn)?;
         Ok(user)
     }
 
     pub fn delete(id: Uuid) -> Result<usize, CustomError> {
-        let conn = database::connection()?;
-        let res = diesel::delete(users::table.filter(users::id.eq(id))).execute(&conn)?;
+        let mut conn = database::connection()?;
+        let res = diesel::delete(users::table.filter(users::id.eq(id))).execute(&mut conn)?;
         Ok(res)
     }
 
