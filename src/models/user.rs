@@ -12,7 +12,6 @@ use crate::errors::CustomError;
 use shrinkwraprs::Shrinkwrap;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
-use diesel::{QueryDsl};
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Debug, Identifiable, AsChangeset, Clone)]
 #[table_name = "users"]
@@ -207,7 +206,7 @@ impl User {
             email: "".to_string(),
             user_name: "dummy".to_string(),
             slug: "".to_string(),
-            created_at: NaiveDateTime::from_timestamp(1_000_000_000, 0),
+            created_at: NaiveDateTime::from_timestamp_opt(1_000_000_000, 0).unwrap(),
             role: "".to_string(),
             validated: false,
         }

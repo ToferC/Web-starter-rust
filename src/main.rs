@@ -1,7 +1,7 @@
 use actix_web::{HttpServer, App, middleware, web};
 use dotenv::dotenv;
 use std::env;
-use tera::{Tera};
+use tera::Tera;
 use tera_text_filters::snake_case;
 use actix_identity::IdentityMiddleware;
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};

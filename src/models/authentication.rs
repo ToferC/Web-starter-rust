@@ -10,7 +10,6 @@ use crate::database;
 
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
-use diesel::{QueryDsl};
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Debug, Identifiable, AsChangeset, Clone)]
 #[table_name = "email_verification_code"]
