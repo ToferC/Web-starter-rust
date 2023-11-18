@@ -6,6 +6,7 @@ use chrono::NaiveDateTime;
 pub struct ToDo {
     id: Uuid,
     user_id: Uuid,
+    title: String,
     description: String,
     priority: Priority,
     due_date: NaiveDateTime,
