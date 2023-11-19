@@ -1,5 +1,15 @@
 // @generated automatically by Diesel CLI.
 
+pub mod sql_types {
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "priority_type"))]
+    pub struct PriorityType;
+
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "status_type"))]
+    pub struct StatusType;
+}
+
 diesel::table! {
     categories (id) {
         id -> Uuid,
@@ -143,6 +153,33 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::PriorityType;
+    use super::sql_types::StatusType;
+
+    todos (id) {
+        id -> Uuid,
+        list_id -> Uuid,
+        #[max_length = 255]
+        title -> Varchar,
+        description -> Nullable<Text>,
+        priority -> PriorityType,
+        status -> StatusType,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    todos_list (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Uuid,
         hash -> Bytea,
@@ -167,6 +204,8 @@ diesel::joinable!(sections -> documents (document_id));
 diesel::joinable!(sections -> template_sections (template_section_id));
 diesel::joinable!(template_sections -> templates (template_id));
 diesel::joinable!(texts -> sections (section_id));
+diesel::joinable!(todos -> todos_list (list_id));
+diesel::joinable!(todos_list -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     categories,
@@ -180,5 +219,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     template_sections,
     templates,
     texts,
+    todos,
+    todos_list,
     users,
 );

@@ -1,10 +1,12 @@
-use crate::errors::CustomError;
+use crate::{errors::CustomError, models::InsertableToDo};
+use chrono::Duration;
 use diesel::pg::PgConnection;
 use diesel::r2d2::ConnectionManager;
 use lazy_static::lazy_static;
 use r2d2;
 use std::env;
-use crate::models::{User, UserData};
+use crate::models::{User, UserData, ToDo, ToDoList, PriorityType, StatusType};
+use uuid::Uuid;
 
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
@@ -54,6 +56,23 @@ pub fn init() {
                 .expect("Unable to create admin");
         
             println!("Admin created: {:?}", &admin);
+
+            // Create user and pre-populate to-dos
+
+            let user_data = UserData {
+                user_name: "Some Person".to_owned(),
+                email: "someone@email.com".to_owned(),
+                password: "WOOLYHIPPOSOUNDFILE".to_owned(),
+                validated: true,
+                role: "user".to_owned(),
+            };
+        
+            let user = User::create(user_data)
+                .expect("Unable to create user");
+        
+            println!("User created: {:?}", &admin);
+
+            let r = pre_populate_to_dos(user.id);
         }
     }
 }
@@ -61,4 +80,39 @@ pub fn init() {
 pub fn connection() -> Result<DbConnection, CustomError> {
     POOL.get()
         .map_err(|e| CustomError::new(500, format!("Failed getting DB connection: {}", e)))
+}
+
+pub fn pre_populate_to_dos(user_id: Uuid) -> Result<usize, CustomError> {
+    let new_list = ToDoList::create(user_id)?;
+
+    let mut todos = Vec::new();
+
+    todos.push(
+            InsertableToDo::new(
+                new_list.id, 
+                "Add error checking to session identity".to_string(), 
+                Some("Just good practice".to_string()), 
+                PriorityType::High, 
+                StatusType::Open, 
+            ));
+    todos.push(
+            InsertableToDo::new(
+                new_list.id, 
+                "Pick up chicken after work".to_string(), 
+                Some("Goes well with wine".to_string()), 
+                PriorityType::Medium, 
+                StatusType::Open, 
+            ));
+    todos.push(
+            InsertableToDo::new(
+                new_list.id, 
+                "Watch Suzume".to_string(), 
+                Some("More than just hype?".to_string()), 
+                PriorityType::Low, 
+                StatusType::Open, 
+            ));
+
+    let result = ToDo::batch_create(todos)?;
+
+    Ok(result)
 }

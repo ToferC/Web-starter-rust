@@ -788,6 +788,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "diesel-derive-enum"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81c5131a2895ef64741dad1d483f358c2a229a3a2d1b256778cdc5e146db64d4"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.39",
+]
+
+[[package]]
 name = "diesel_derives"
 version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -976,7 +988,7 @@ dependencies = [
  "fluent-syntax",
  "fluent-template-macros",
  "flume",
- "heck",
+ "heck 0.3.3",
  "ignore",
  "lazy_static",
  "log",
@@ -1222,6 +1234,12 @@ checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
 dependencies = [
  "unicode-segmentation",
 ]
+
+[[package]]
+name = "heck"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
 name = "hermit-abi"
@@ -2774,7 +2792,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fef4d0b73a2c9f3cbf55a1b0511bf8173024471da07266d0184f8cd0a480a5a0"
 dependencies = [
- "heck",
+ "heck 0.3.3",
  "tera",
 ]
 
@@ -3359,6 +3377,7 @@ dependencies = [
  "deepl-api",
  "derive_more",
  "diesel",
+ "diesel-derive-enum",
  "diesel_migrations",
  "dotenv",
  "env_logger",

@@ -3,6 +3,20 @@
 {% block content %}
         <div class="col m-md-2 m-1">
             <h1>{{ fluent(key="welcome-to", lang=lang) }}</h1>
+            <hr>
 
+            {% for todo in todos %}
+            <div class="card" style="width: 18rem;">
+                <div class="card-body">
+                  <h5 class="card-title">{{ todo.title }}</h5>
+                  <p class="card-text">{{ todo.description }}</p>
+                  <p class="card-text">{{ todo.status }}</p>
+                  <p class="card-text">{{ todo.priority }}</p>
+                  <a href="/close_todo/{{ todo.id }}" class="btn btn-primary">Close</a>
+                </div>
+              </div>
+              <br>
+            {% endfor %}
+        
         </div>
 {% endblock content %}
