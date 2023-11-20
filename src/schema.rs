@@ -4,10 +4,6 @@ pub mod sql_types {
     #[derive(diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "priority_type"))]
     pub struct PriorityType;
-
-    #[derive(diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "status_type"))]
-    pub struct StatusType;
 }
 
 diesel::table! {
@@ -155,7 +151,6 @@ diesel::table! {
 diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::PriorityType;
-    use super::sql_types::StatusType;
 
     todos (id) {
         id -> Uuid,
@@ -164,7 +159,7 @@ diesel::table! {
         title -> Varchar,
         description -> Nullable<Text>,
         priority -> PriorityType,
-        status -> StatusType,
+        active -> Bool,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }

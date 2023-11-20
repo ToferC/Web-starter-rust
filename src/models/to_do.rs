@@ -21,7 +21,7 @@ pub struct ToDo {
     pub title: String,
     pub description: Option<String>,
     pub priority: PriorityType,
-    pub status: StatusType,
+    pub active: bool,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -29,11 +29,11 @@ pub struct ToDo {
 #[derive(Debug, Clone, Deserialize, Serialize, Insertable)]
 #[diesel(table_name = todos)]
 pub struct InsertableToDo {
-    list_id: Uuid,
-    title: String,
-    description: Option<String>,
-    priority: PriorityType,
-    status: StatusType,
+    pub list_id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub priority: PriorityType,
+    pub active: bool,
 }
 
 impl InsertableToDo {
@@ -42,7 +42,7 @@ impl InsertableToDo {
         title: String,
         description: Option<String>,
         priority: PriorityType,
-        status: StatusType,
+        active: bool,
     ) -> Self {
 
         InsertableToDo {
@@ -50,7 +50,7 @@ impl InsertableToDo {
             title,
             description,
             priority,
-            status,
+            active,
         }
     }
 }
@@ -88,14 +88,14 @@ impl ToDo {
     pub fn toggle_status(self) -> Result<Self, CustomError> {
         let mut conn = database::connection()?;
 
-        let new_status = match self.status {
-            StatusType::Closed => StatusType::Open,
-            StatusType::Open => StatusType::Closed,
+        let new_status = match self.active {
+            true => false,
+            false => true,
         };
 
         let result = diesel::update(todos::table)
             .filter(todos::id.eq(self.id))
-            .set((todos::status.eq(new_status)))
+            .set((todos::active.eq(new_status)))
             .get_result(&mut conn)?;
 
         Ok(result)
@@ -148,10 +148,11 @@ impl ToDoList {
         Ok(lists)
     }
 
-    pub fn get_todos(id: Uuid) -> Result<Vec<ToDo>, CustomError> {
+    pub fn get_active_todos(id: Uuid) -> Result<Vec<ToDo>, CustomError> {
         let mut conn = database::connection()?;
 
         let result: Vec<ToDo> = todos::table.filter(todos::list_id.eq(id))
+            .filter(todos::active.eq(true))
             .load::<ToDo>(&mut conn)?;
 
         Ok(result)
@@ -164,11 +165,4 @@ pub enum PriorityType {
     Low,
     Medium,
     High,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
-#[ExistingTypePath = "crate::schema::sql_types::StatusType"]
-pub enum StatusType {
-    Open,
-    Closed,
 }

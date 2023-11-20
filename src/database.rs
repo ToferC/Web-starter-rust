@@ -5,7 +5,7 @@ use diesel::r2d2::ConnectionManager;
 use lazy_static::lazy_static;
 use r2d2;
 use std::env;
-use crate::models::{User, UserData, ToDo, ToDoList, PriorityType, StatusType};
+use crate::models::{User, UserData, ToDo, ToDoList, PriorityType};
 use uuid::Uuid;
 
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -93,7 +93,7 @@ pub fn pre_populate_to_dos(user_id: Uuid) -> Result<usize, CustomError> {
                 "Add error checking to session identity".to_string(), 
                 Some("Just good practice".to_string()), 
                 PriorityType::High, 
-                StatusType::Open, 
+                true, 
             ));
     todos.push(
             InsertableToDo::new(
@@ -101,7 +101,7 @@ pub fn pre_populate_to_dos(user_id: Uuid) -> Result<usize, CustomError> {
                 "Pick up chicken after work".to_string(), 
                 Some("Goes well with wine".to_string()), 
                 PriorityType::Medium, 
-                StatusType::Open, 
+                true, 
             ));
     todos.push(
             InsertableToDo::new(
@@ -109,7 +109,7 @@ pub fn pre_populate_to_dos(user_id: Uuid) -> Result<usize, CustomError> {
                 "Watch Suzume".to_string(), 
                 Some("More than just hype?".to_string()), 
                 PriorityType::Low, 
-                StatusType::Open, 
+                true, 
             ));
 
     let result = ToDo::batch_create(todos)?;

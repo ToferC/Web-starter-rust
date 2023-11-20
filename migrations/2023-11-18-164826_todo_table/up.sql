@@ -5,11 +5,6 @@ CREATE TYPE priority_type AS ENUM (
     'high'
 );
 
-CREATE TYPE status_type as ENUM (
-    'open',
-    'closed'
-);
-
 CREATE TABLE IF NOT EXISTS todos_list (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL,
@@ -27,7 +22,7 @@ CREATE TABLE IF NOT EXISTS todos (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     priority priority_type NOT NULL DEFAULT 'medium',
-    status status_type NOT NULL DEFAULT 'open',
+    active bool NOT NULL DEFAULT true,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

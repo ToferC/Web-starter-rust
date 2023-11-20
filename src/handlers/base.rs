@@ -28,7 +28,7 @@ pub async fn index(
     let mut todos: Vec<ToDo> = Vec::new();
 
     for list in todo_lists {
-        let mut td = ToDoList::get_todos(list.id).unwrap();
+        let mut td = ToDoList::get_active_todos(list.id).unwrap();
         todos.append(&mut td);
     }
 
