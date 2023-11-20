@@ -5,14 +5,14 @@
             <h1>{{ fluent(key="welcome-to", lang=lang) }}</h1>
             <hr>
 
-            {% for todo in todos %}
+            {% for todo in todos | sort(attribute="priority") %}
             <div class="card" style="width: 18rem;">
                 <div class="card-body">
                   <h5 class="card-title">{{ todo.title }}</h5>
                   <p class="card-text">{{ todo.description }}</p>
-                  <p class="card-text">{{ todo.status }}</p>
-                  <p class="card-text">{{ todo.priority }}</p>
-                  <a href="/close_todo/{{ todo.id }}" class="btn btn-primary">Close</a>
+                  <p class="card-text">Status: {{ todo.status }}</p>
+                  <p class="card-text">Priority: {{ todo.priority }}</p>
+                  <a method="post" href="/{{lang}}/toggle_status/{{ todo.id }}" class="btn btn-primary">{% if todo.status == "Open" %}Close{% else %}Open{% endif %}</a>
                 </div>
               </div>
               <br>

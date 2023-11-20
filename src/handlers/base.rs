@@ -1,8 +1,5 @@
-use std::collections::HashMap;
-
 use actix_web::{web, get, Responder, HttpResponse, HttpRequest};
 use actix_identity::Identity;
-use uuid::Uuid;
 
 use crate::{generate_basic_context, AppData};
 

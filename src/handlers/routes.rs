@@ -48,6 +48,9 @@ use crate::handlers::{
     delete_user,
     delete_user_handler,
 
+    //todos
+    toggle_status,
+
 };
 
 pub fn configure_services(config: &mut web::ServiceConfig) {
@@ -94,4 +97,7 @@ pub fn configure_services(config: &mut web::ServiceConfig) {
      config.service(edit_user_post);
      config.service(delete_user);
      config.service(delete_user_handler);
+
+     //todos
+     config.service(toggle_status);
 }

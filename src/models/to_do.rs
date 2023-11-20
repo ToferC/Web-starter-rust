@@ -84,6 +84,22 @@ impl ToDo {
 
         Ok(result)
     }
+
+    pub fn toggle_status(self) -> Result<Self, CustomError> {
+        let mut conn = database::connection()?;
+
+        let new_status = match self.status {
+            StatusType::Closed => StatusType::Open,
+            StatusType::Open => StatusType::Closed,
+        };
+
+        let result = diesel::update(todos::table)
+            .filter(todos::id.eq(self.id))
+            .set((todos::status.eq(new_status)))
+            .get_result(&mut conn)?;
+
+        Ok(result)
+    }
 }
 
 #[derive(Serialize, Deserialize, Queryable, Debug, Identifiable, AsChangeset, Clone, Insertable)]
