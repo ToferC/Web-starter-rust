@@ -1,30 +1,32 @@
+use std::char;
+
 use chrono::NaiveDateTime;
 use uuid::Uuid;
 
 use serde::{Serialize, Deserialize};
 
+use crate::errors::CustomError;
 use crate::schema::creatures;
-use crate::database;
+use crate::database::connection;
 
 use diesel::prelude::*;
-use diesel::RunQueryDsl;
-use diesel::{QueryDsl};
+use diesel::{RunQueryDsl, QueryDsl};
 
-#[derive(Serialize, Deserialize, Queryable, Insertable, Debug, Associations, Identifiable, AsChangeset, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Debug, Identifiable, AsChangeset, Clone)]
 #[table_name = "creatures"]
 pub struct Creature {
     pub id: Uuid,
     pub creator_id: Uuid,
     pub creature_name: String,
-    pub found_in: Locales,
+    pub found_in: Vec<Locales>,
     pub rarity: Rarity,
     pub circle_rank: u32,
-    pub dex: u32,
+    pub dexterity: u32,
     pub strength: u32,
-    pub con: u32,
-    pub per: u32,
-    pub wil: u32,
-    pub cha: u32,
+    pub constitution: u32,
+    pub perception: u32,
+    pub willpower: u32,
+    pub charisma: u32,
     pub initiative: u32,
     pub pd: u32,
     pub md: u32,
@@ -44,8 +46,8 @@ pub struct Creature {
 }
 
 impl Creature {
-    pub fn create(creature_data: &InsertableCreature) -> Result<Self> {
-        let mut conn = database::connection()?;
+    pub fn create(creature_data: &InsertableCreature) -> Result<Self, CustomError> {
+        let mut conn = connection()?;
         let res = diesel::insert_into(creatures::table)
             .values(creature_data)
             .get_result(&mut conn)?;
@@ -53,7 +55,7 @@ impl Creature {
         Ok(res)
     }
 
-    pub fn get_or_create(creature: &InsertableCreature) -> Result<Self> {
+    pub fn get_or_create(creature: &InsertableCreature) -> Result<Self, CustomError> {
         let mut conn = connection()?;
         let res = creatures::table
             .filter(creatures::creature_name.eq(&creature.creature_name))
@@ -72,7 +74,7 @@ impl Creature {
         Ok(creature)
     }
 
-    pub fn get_by_id(id: &Uuid) -> Result<Self> {
+    pub fn get_by_id(id: &Uuid) -> Result<Self, CustomError> {
         let mut conn = connection()?;
 
         let res = creatures::table
@@ -82,7 +84,7 @@ impl Creature {
         Ok(res)
     }
 
-    pub fn get_by_name(name: &String) -> Result<Vec<Self>> {
+    pub fn get_by_name(name: &String) -> Result<Vec<Self>, CustomError> {
         let mut conn = connection()?;
 
         let res = creatures::table
@@ -90,7 +92,7 @@ impl Creature {
             .load::<Creature>(&mut conn)?;
     }
 
-    pub fn get_by_slug(name: &String) -> Result<Self> {
+    pub fn get_by_slug(slug: &String) -> Result<Self, CustomError> {
         let mut conn = connection()?;
 
         let res = creatures::table
@@ -98,7 +100,7 @@ impl Creature {
             .first::<Creature>(&mut conn)?;
     }
 
-    pub fn update(&mut self) -> Result<Self> {
+    pub fn update(&mut self) -> Result<Self, CustomError> {
         let mut conn = connection()?;
 
         self.updated_at = chrono::Utc::now().naive_utc();
@@ -112,8 +114,8 @@ impl Creature {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialOrd)]
-#[diesel(table_name = rarities)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, PartialOrd)]
+#[table_name = "rarities"]
 pub enum Rarity {
     Common,
     Uncommon,
@@ -121,7 +123,7 @@ pub enum Rarity {
     Unique,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialOrd)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, PartialOrd)]
 #[diesel(table_name = locales)]
 pub enum Locales {
     Jungle,
@@ -144,19 +146,19 @@ pub struct InsertableCreature {
     pub found_in: Locales,
     pub rarity: Rarity,
     pub circle_rank: u32,
-    pub dex: u32,
+    pub dexterity: u32,
     pub strength: u32,
-    pub con: u32,
-    pub per: u32,
-    pub wil: u32,
-    pub cha: u32,
+    pub constitution: u32,
+    pub perception: u32,
+    pub willpower: u32,
+    pub charisma: u32,
     pub initiative: u32,
     pub pd: u32,
     pub md: u32,
     pub sd: u32,
     pub pa: u32,
     pub ma: u32,
-    pub unconscious_rating: u32,
+    pub unconsciousness_rating: u32,
     pub death_rating: u32,
     pub wound: u32,
     pub knockdown: u32,
@@ -173,18 +175,18 @@ impl InsertableCreature {
         let locales = Locales::Jungle;
         let today = chrono::Utc::now().naive_utc();
 
-        Creature {
+        InsertableCreature {
             creator_id,
             creature_name: "Esparaga".to_string(),
             found_in: locales,
             rarity: Rarity::Rare,
             circle_rank: 5,
-            dex: 10,
+            dexterity: 10,
             strength: 10,
-            con: 10,
-            per: 10,
-            wil: 10,
-            cha: 10,
+            constitution: 10,
+            perception: 10,
+            willpower: 10,
+            charisma: 10,
             initiative: 10,
             pd: 9,
             md: 9,
@@ -199,8 +201,6 @@ impl InsertableCreature {
             recovery_rolls: 3,
             image_url: "hdahdksfashf".to_string(),
             slug: "esparaga".to_owned(),
-            created_at: today,
-            updated_at: today,
         }
     }
 
@@ -210,19 +210,19 @@ impl InsertableCreature {
         found_in: Vec<Locales>,
         rarity: Rarity,
         circle_rank: u32,
-        dex: u32,
+        dexterity: u32,
         strength: u32,
-        con: u32,
-        per: u32,
-        wil: u32,
-        cha: u32,
+        constitution: u32,
+        perception: u32,
+        willpower: u32,
+        charisma: u32,
         initiative: u32,
         pd: u32,
         md: u32,
         sd: u32,
         pa: u32,
         ma: u32,
-        unconscious_rating: u32,
+        unconsciousness_rating: u32,
         death_rating: u32,
         wound: u32,
         knockdown: u32,
@@ -238,26 +238,26 @@ impl InsertableCreature {
             found_in,
             rarity,
             circle_rank,
-            dex,
+            dexterity,
             strength,
-            con,
-            per,
-            wil,
-            cha,
+            constitution,
+            perception,
+            willpower,
+            charisma,
             initiative,
             pd,
             md,
             sd,
             pa,
             ma,
-            unconscious_rating,
+            unconsciousness_rating,
             death_rating,
             wound,
             knockdown,
             actions,
             recovery_rolls,
             slug,
-            "default_image_url".to_owned(),
+            image_url: "default_image_url".as_string(),
         }
     }
 }

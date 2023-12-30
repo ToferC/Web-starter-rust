@@ -1,11 +1,11 @@
-use crate::{errors::CustomError, models::InsertableToDo};
+use crate::{errors::CustomError, models::InsertableCreature};
 use chrono::Duration;
 use diesel::pg::PgConnection;
 use diesel::r2d2::ConnectionManager;
 use lazy_static::lazy_static;
 use r2d2;
 use std::env;
-use crate::models::{User, UserData, ToDo, ToDoList, PriorityType};
+use crate::models::{User, UserData};
 use uuid::Uuid;
 
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -72,7 +72,7 @@ pub fn init() {
         
             println!("User created: {:?}", &admin);
 
-            let r = pre_populate_to_dos(user.id);
+            let r = pre_populate_creatures(user.id);
         }
     }
 }
@@ -82,37 +82,8 @@ pub fn connection() -> Result<DbConnection, CustomError> {
         .map_err(|e| CustomError::new(500, format!("Failed getting DB connection: {}", e)))
 }
 
-pub fn pre_populate_to_dos(user_id: Uuid) -> Result<usize, CustomError> {
-    let new_list = ToDoList::create(user_id)?;
+pub fn pre_populate_creatures(user_id: Uuid) -> Result<(), CustomError> {
+    
 
-    let mut todos = Vec::new();
-
-    todos.push(
-            InsertableToDo::new(
-                new_list.id, 
-                "Add error checking to session identity".to_string(), 
-                Some("Just good practice".to_string()), 
-                PriorityType::High, 
-                true, 
-            ));
-    todos.push(
-            InsertableToDo::new(
-                new_list.id, 
-                "Pick up chicken after work".to_string(), 
-                Some("Goes well with wine".to_string()), 
-                PriorityType::Medium, 
-                true, 
-            ));
-    todos.push(
-            InsertableToDo::new(
-                new_list.id, 
-                "Watch Suzume".to_string(), 
-                Some("More than just hype?".to_string()), 
-                PriorityType::Low, 
-                true, 
-            ));
-
-    let result = ToDo::batch_create(todos)?;
-
-    Ok(result)
+    Ok(())
 }
