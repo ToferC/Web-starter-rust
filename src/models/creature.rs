@@ -1,5 +1,3 @@
-use std::char;
-
 use chrono::NaiveDateTime;
 use uuid::Uuid;
 
@@ -11,6 +9,7 @@ use crate::database::connection;
 
 use diesel::prelude::*;
 use diesel::{RunQueryDsl, QueryDsl};
+use diesel_derive_enum::DbEnum;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Debug, Identifiable, AsChangeset, Clone)]
 #[table_name = "creatures"]
@@ -114,8 +113,8 @@ impl Creature {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, PartialOrd)]
-#[table_name = "rarities"]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
+#[ExistingTypePath = "crate::schema::sql_types::Rarities"]
 pub enum Rarity {
     Common,
     Uncommon,
@@ -123,8 +122,8 @@ pub enum Rarity {
     Unique,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, PartialOrd)]
-#[diesel(table_name = locales)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, DbEnum, Serialize, Deserialize)]
+#[ExistingTypePath = "crate::schema::sql_types::Locales"]
 pub enum Locales {
     Jungle,
     Desert,
@@ -137,13 +136,13 @@ pub enum Locales {
     Any,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Insertable, InputObject, Queryable)]
+#[derive(Debug, Clone, Deserialize, Serialize, Insertable, Queryable)]
 /// Referenced by Roles, TeamOwnership, OrgOwnership
 #[diesel(table_name = creatures)]
 pub struct InsertableCreature {
     pub creator_id: Uuid,
     pub creature_name: String,
-    pub found_in: Locales,
+    pub found_in: Vec<Locales>,
     pub rarity: Rarity,
     pub circle_rank: u32,
     pub dexterity: u32,
